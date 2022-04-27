@@ -3,7 +3,7 @@ name: maia ['A custom terminal user interface emulator running on crossterm']
 version string: 0.0.2
 */
 
-use ansi_term::{Colour};
+use ansi_term::Colour;
 #[allow(dead_code)]
 mod utils;
 #[allow(unused_imports)]
@@ -25,7 +25,6 @@ use crossterm::{
     terminal,
     event,
     style,
-
 };
 
 pub trait TerminalMenuItem {
@@ -117,11 +116,7 @@ pub fn print_menu(max_namelen: u16, selection: usize, menu_items: &mut Vec<(Stri
         terminal::Clear(terminal::ClearType::FromCursorUp)
         ).unwrap();
 
-        // display starting prompt -> change to a custom cursor tick & color -> create the cursor in a function and initialize starting screen in main.
-        print!("{}", menu_items[0].0);
-        move_to_x(8);
-        menu_items[0].1.print();
-        println!();
+        menu_items[0].1.print(); // print status
 
         for i in 1..menu_items.len() {
             println!();
@@ -138,9 +133,9 @@ pub fn print_menu(max_namelen: u16, selection: usize, menu_items: &mut Vec<(Stri
             }
             move_to_x(0);
         }
-        
     }
 }
+
 pub fn engage(items: &mut Vec<(String, MenuItem)>,selection: &mut usize, _initial_print: bool) -> usize {
     execute!(stdout(), cursor::Hide).unwrap();
     // handle 0 items in the menu - this is for debugging only, no need for it on release
@@ -149,7 +144,8 @@ pub fn engage(items: &mut Vec<(String, MenuItem)>,selection: &mut usize, _initia
 
     let mut selection:usize = *selection;
     let longest_name: u16 = longest_name_calc(items);
-    // Main Loop
+
+    // event loop
     loop {
         terminal::enable_raw_mode().unwrap();
         // Handle Enter
@@ -179,24 +175,21 @@ pub fn engage(items: &mut Vec<(String, MenuItem)>,selection: &mut usize, _initia
 
             // Handle Down
             event::Event::Key(event::KeyEvent {
-                
                 code: event::KeyCode::Down,
-                modifiers: _no_modifiers,
-            }) => {
-                
-                offset_y(0, (selection as i16) - (items.len() as i16) + 1);
-                print!(" ");
-                if selection == items.len() - 1 { // last to first element
-                    selection = 1;
-                    offset_y(0, -(items.len() as i16) + 2);
+                modifiers: _no_modifiers,}) => {
+                    offset_y(0, (selection as i16) - (items.len() as i16) + 1);
+                    print!(" ");
+                    if selection == items.len() - 1 { // last to first element
+                        selection = 1;
+                        offset_y(0, -(items.len() as i16) + 2);
+                    }
+                    else { // any other case
+                        selection += 1;
+                        offset_y(0, 1);
+                    }
+                    print!("+");
+                    offset_y(0, (items.len() as i16) - (selection as i16) - 1);    
                 }
-                else { // any other case
-                    selection += 1;
-                    offset_y(0, 1);
-                }
-                print!("+");
-                offset_y(0, (items.len() as i16) - (selection as i16) - 1);    
-            }
             // redraw in case of resize
             event::Event::Resize(_, term_height) => {
                 execute!(stdout(), cursor::Hide).unwrap();
@@ -232,16 +225,13 @@ pub fn engage(items: &mut Vec<(String, MenuItem)>,selection: &mut usize, _initia
                 modifiers: _no_modifiers,
             }) => {
                 terminal::disable_raw_mode().unwrap();
-                //execute!(stdout(), cursor::Hide).unwrap();
                 if items[selection].1.enter() {
                     if items[selection].0 == "Exit" {
                         break;
                     }
                     else if items[selection].0 == "status: " {} // ignore status bar
                     else {
-                        execute!(stdout(), cursor::Hide).unwrap();
-                        //let mut err_flag = true; - error flag can be used with while loop
-                        //while err_flag {
+                        execute!(stdout(), cursor::Hide).unwrap(); // hide cursor
 
                         // reallocate 8 bytes for this buffer.
                         let mut buffer: String = String::new(); // 'reset' buffer
@@ -258,12 +248,7 @@ pub fn engage(items: &mut Vec<(String, MenuItem)>,selection: &mut usize, _initia
                         // assign prompt
                         let mut assign_prompt: String = String::new();
                         assign_prompt.push_str("Assign value [f64]: ");
-                        let assign_prompt = utils::trim_newline(&mut assign_prompt);
-                        
-                        execute!(stdout(), cursor::SavePosition).unwrap();
-                        offset_y(0, items.len() as i16);
                         print!("{}",assign_prompt);
-                        let _=stdout().flush();
 
                         // need to point to a function that performs 
                         // a position check based on the terminal size
@@ -278,9 +263,6 @@ pub fn engage(items: &mut Vec<(String, MenuItem)>,selection: &mut usize, _initia
                         let trimmed = buffer.trim();
                         let _input_parse_match: () = match trimmed.parse::<f64>() {
                             Ok(i) => {
-                                //err_flag = false;
-                                //print!("{}", Style::default().on(Colour::RGB(r, g, b)).paint(" "));
-
                                 let success_modify_status: String = (Colour::RGB(0, 175, 0)).paint("all looks good").to_string();
                                 items[selection].1.modify_value(i.to_string());
                                 items[0].1.modify_value(success_modify_status);
@@ -288,14 +270,9 @@ pub fn engage(items: &mut Vec<(String, MenuItem)>,selection: &mut usize, _initia
                             }
                             Err(_e) => {
                                 let error_modify_status: String = (Colour::RGB(175, 0, 0)).paint("invalid float literal").to_string();
-                                //let error_modify_status_edited = trim_newline_str(&mut error_modify_status);
                                 items[0].1.modify_value(error_modify_status);
                             }
                         };
-                        //}
-                        terminal::enable_raw_mode().unwrap();
-                        execute!(stdout(), cursor::RestorePosition).unwrap();
-                        offset_y(0, selection as i16);
                         break;
                     }
                 }
@@ -303,12 +280,7 @@ pub fn engage(items: &mut Vec<(String, MenuItem)>,selection: &mut usize, _initia
             _ => {}
         }
     }
-    //
-    execute!(stdout(),
-        cursor::MoveUp(items.len() as u16),
-        terminal::Clear(terminal::ClearType::FromCursorDown)
-    ).unwrap();
-    //offset_y(0, selection as i16);
+    move_to_y(0); // move to (0,0)
     return selection
 }
 
@@ -321,7 +293,7 @@ fn main() {
         ("receiver frequency".to_owned(), MenuItem::new_numeral(401.0.to_string())), //user input when selected
         ("Exit".to_owned(), MenuItem::new_numeral(String::new()))
     ];
-    
+
     let items: &mut Vec<(String, MenuItem)> = &mut menu_ver_2;
     // selection handler
     let mut selection: usize = 1; // compensate for status prompt
@@ -330,6 +302,7 @@ fn main() {
 
     // print initial menu
     print_menu(longest_name, selection, items, true);
+
     loop {
 
         // output user selection 
@@ -341,6 +314,7 @@ fn main() {
         selection = result;
 
         if selection != 4 {
+            // if not "Exit"
             continue;
         }
         break;
