@@ -89,14 +89,14 @@ pub fn print_menu(max_namelen: u16, selection: usize, menu_items: &mut Vec<(Stri
         print!("{}", menu_items[0].0);
         move_to_x(8);
         menu_items[0].1.print();
-        println!();
-        println!();
+        print!("\n");
+        print!("\n");
         print!("+ {}", menu_items[1].0);
 
         move_to_x(max_namelen + 7);
         menu_items[1].1.print();
         for i in 2..menu_items.len() {
-            println!();
+            print!("\n");
             move_to_x(2);
             print!("{}", menu_items[i].0);
             move_to_x(max_namelen + 7);
@@ -119,7 +119,7 @@ pub fn print_menu(max_namelen: u16, selection: usize, menu_items: &mut Vec<(Stri
         menu_items[0].1.print(); // print status
 
         for i in 1..menu_items.len() {
-            println!();
+            print!("\n");
 
             if i == selection { 
                 print!("+ {}", menu_items[selection].0);
@@ -198,14 +198,14 @@ pub fn engage(items: &mut Vec<(String, MenuItem)>,selection: &mut usize, _initia
                     print!("{}", items[0].0);
                     move_to_x(8);
                     items[0].1.print();
-                    println!();
-                    println!();
+                    print!("\n");
+                    print!("\n");
                     print!("+ {}", items[1].0);
                 
                     move_to_x(longest_name + 7);
                     items[1].1.print();
                     for i in 2..items.len() {
-                        println!();
+                        print!("\n");
                         move_to_x(2);
                         print!("{}", items[i].0);
                         move_to_x(longest_name + 7);
@@ -320,6 +320,8 @@ fn main() {
         break;
     }
     execute!(stdout(), cursor::Show).unwrap();
+    print!("\n"); //exit at newline
+
     // access values for export 
     //println!("{}", menu_ver_2[1].1.val);
     // implement export logic here
